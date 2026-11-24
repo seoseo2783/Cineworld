@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineWorld - 국가별 키워드 영화 추천</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                    },
+                    colors: {
+                        cinema: {
+                            950: '#09090b',
+                            900: '#121217',
+                            800: '#1c1c24',
+                            700: '#272732',
+                            accent: '#e11d48',
+                            accentHover: '#be123c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-cinema-950 text-zinc-100 font-sans min-h-screen flex flex-col selection:bg-cinema-accent selection:text-white">
+
+    <!-- 헤더 네비게이션 -->
+    <header class="sticky top-0 z-40 bg-cinema-950/80 backdrop-blur-md border-b border-zinc-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="resetFilters()">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/20">
+                    <i data-lucide="film" class="w-5 h-5 text-white"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+                    CineWorld
+                </span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="bookmarkViewBtn" onclick="toggleBookmarkView()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-cinema-800 hover:bg-cinema-700 text-sm font-medium text-zinc-200 transition-all border border-zinc-700/50">
+                    <i data-lucide="bookmark" class="w-4 h-4 text-rose-400"></i>
+                    <span class="hidden sm:inline">찜한 영화</span>
+                    <span id="bookmarkCount" class="bg-rose-500/20 text-rose-400 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 히어로 & 검색 섹션 -->
+    <section class="relative pt-10 pb-8 px-4 sm:px-6 lg:px-8 border-b border-zinc-800/60 bg-gradient-to-b from-cinema-900 to-cinema-950">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
+                전 세계 영화를 <span class="text-rose-500">키워드</span>로 찾아보세요
+            </h1>
+            <p class="text-zinc-400 text-sm sm:text-base mb-8 max-w-2xl mx-auto">
+                분위기, 장르, 테마 키워드를 입력하고 원하는 국가를 선택하면 맞춤형 영화를 추천해 드립니다.
+            </p>
+
+            <!-- 검색 바 -->
+            <div class="relative max-w-2xl mx-auto mb-6">
+                <div class="relative flex items-center">
+                    <i data-lucide="search" class="w-5 h-5 text-zinc-400 absolute left-4 pointer-events-none"></i>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="키워드 검색 (예: 반전, 타임루프, 가족, 힐링, 사이버펑크, 로맨스...)" 
+                        class="w-full pl-12 pr-24 py-4 rounded-2xl bg-cinema-800 border border-zinc-700/80 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent shadow-xl transition-all text-sm sm:text-base"
+                    >
+                    <button 
+                        id="clearSearchBtn" 
+                        onclick="clearSearch()" 
+                        class="hidden absolute right-20 p-1.5 text-zinc-400 hover:text-white rounded-lg"
+                        title="검색어 지우기"
+                    >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                    <button 
+                        onclick="handleSearch()" 
+                        class="absolute right-2 px-4 py-2 bg-cinema-accent hover:bg-cinema-accentHover text-white font-medium rounded-xl text-sm transition-colors shadow-lg shadow-rose-600/20"
+                    >
+                        검색
+                    </button>
+                </div>
+            </div>
+
+            <!-- 추천 키워드 칩 -->
+            <div class="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+                <span class="text-zinc-500 mr-1 flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> 인기 키워드:
+                </span>
+                <button onclick="applyKeyword('킬링타임')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#킬링타임</button>
+                <button onclick="applyKeyword('반전')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#반전</button>
+                <button onclick="applyKeyword('코미디')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#코미디</button>
+                <button onclick="applyKeyword('액션')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#액션</button>
+                <button onclick="applyKeyword('힐링')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#힐링</button>
+                <button onclick="applyKeyword('공포')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#공포</button>
+                <button onclick="applyKeyword('로맨스')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#로맨스</button>
+                <button onclick="applyKeyword('타임루프')" class="keyword-chip px-3 py-1.5 rounded-full bg-cinema-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/60 transition-all">#타임루프</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 국가 필터 및 정렬 컨트롤 바 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- 국가 선택 탭 -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar" id="countryTabs">
+                <!-- 자바스크립트로 국가 버튼 렌더링 -->
+            </div>
+
+            <!-- 정렬 & 필터 상태 -->
+            <div class="flex items-center justify-between md:justify-end gap-3 shrink-0">
+                <span id="resultCount" class="text-sm text-zinc-400">총 <strong class="text-white">0</strong>편의 영화</span>
+                <select id="sortSelect" onchange="renderMovies()" class="bg-cinema-800 border border-zinc-700 text-zinc-200 text-sm rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer">
+                    <option value="rating">평점 높은순</option>
+                    <option value="year_desc">최신 개봉순</option>
+                    <option value="year_asc">과거 개봉순</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 현재 적용된 필터 알림 배너 (찜한 영화 보기 모드 등) -->
+        <div id="filterBanner" class="hidden mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 text-rose-300 text-sm font-medium">
+                <i data-lucide="bookmark" class="w-4 h-4"></i>
+                <span id="filterBannerText">찜한 영화 목록을 보고 있습니다.</span>
+            </div>
+            <button onclick="resetFilters()" class="text-xs bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
+                전체 영화로 돌아가기
+            </button>
+        </div>
+
+        <!-- 영화 그리드 컨테이너 -->
+        <div id="movieGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- 영화 카드가 동적으로 삽입됩니다 -->
+        </div>
+
+        <!-- 검색 결과 없음 상태 -->
+        <div id="emptyState" class="hidden py-20 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-cinema-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4 text-zinc-500">
+                <i data-lucide="film" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-zinc-200 mb-1">일치하는 추천 영화가 없습니다</h3>
+            <p class="text-zinc-400 text-sm mb-6">다른 키워드로 검색하거나 국가 필터를 '전체'로 변경해 보세요.</p>
+            <button onclick="resetFilters()" class="px-5 py-2.5 rounded-xl bg-cinema-800 hover:bg-cinema-700 text-white text-sm font-medium border border-zinc-700 transition-colors">
+                필터 초기화
+            </button>
+        </div>
+    </main>
+
+    <!-- 영화 상세 모달 -->
+    <div id="movieModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
+        <div class="bg-cinema-900 border border-zinc-800 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl transform transition-all relative max-h-[90vh] flex flex-col">
+            <!-- 닫기 버튼 -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/60 hover:bg-black text-zinc-300 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="overflow-y-auto" id="modalContent">
+                <!-- 상세 내용 동적 렌더링 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 토스트 알림 컨테이너 -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- 푸터 -->
+    <footer class="border-t border-zinc-800/80 bg-cinema-950 py-8 px-4 text-center text-zinc-500 text-xs sm:text-sm">
+        <p>© 2026 CineWorld. 키워드 기반 국가별 큐레이션 영화 추천 서비스.</p>
+    </footer>
+
+    <script>
+        // 국가 데이터 정의
+        const COUNTRIES = [
+            { id: 'ALL', name: '전체 국가', flag: '🌍' },
+            { id: 'KR', name: '한국', flag: '🇰🇷' },
+            { id: 'US', name: '미국', flag: '🇺🇸' },
+            { id: 'JP', name: '일본', flag: '🇯🇵' },
+            { id: 'FR', name: '프랑스', flag: '🇫🇷' },
+            { id: 'GB', name: '영국', flag: '🇬🇧' },
+            { id: 'ES', name: '스페인', flag: '🇪🇸' },
+            { id: 'TW', name: '대만', flag: '🇹🇼' },
+            { id: 'HK', name: '홍콩/중국', flag: '🇭🇰' },
+            { id: 'DE', name: '독일', flag: '🇩🇪' },
+            { id: 'IT', name: '이탈리아', flag: '🇮🇹' },
+            { id: 'IN', name: '인도', flag: '🇮🇳' },
+            { id: 'TH', name: '태국', flag: '🇹🇭' }
+        ];
+
+        // 다양한 장르와 최신작, 상업영화를 포함한 70편의 영화 데이터베이스
+        const MOVIES = [
+            // 한국 (KR) - 12편
+            {
+                id: 1,
+                title: "기생충",
+                engTitle: "Parasite",
+                country: "KR",
+                year: 2019,
+                rating: 9.3,
+                director: "봉준호",
+                genre: ["드라마", "스릴러", "블랙코미디"],
+                keywords: ["계급사회", "반전", "가족", "블랙코미디", "긴장감"],
+                synopsis: "전원백수로 살 길 막막하지만 사이는 좋은 기택 가족. 장남 기우에게 명문대생 친구가 연결시켜 준 고액 과외 자리는 모처럼 싹튼 고정수입의 희망이다.",
+                reason: "예측할 수 없는 전개와 날카로운 사회 풍자, 강렬한 반전을 갖춘 대표작입니다.",
+                gradient: "from-emerald-900 via-zinc-900 to-black"
+            },
+            {
+                id: 2,
+                title: "극한직업",
+                engTitle: "Extreme Job",
+                country: "KR",
+                year: 2019,
+                rating: 8.6,
+                director: "이병헌",
+                genre: ["코미디", "액션"],
+                keywords: ["코미디", "킬링타임", "형사", "치킨", "유머", "액션"],
+                synopsis: "해체 위기의 마약반 5인방이 범죄조직 소탕을 위해 위장창업한 '마약치킨'이 일약 맛집으로 입소문을 타게 되면서 벌어지는 코믹 수사극.",
+                reason: "아무 생각 없이 배꼽 빠지게 웃고 싶을 때 최고인 한국 대표 코미디 영화입니다.",
+                gradient: "from-amber-700 via-orange-950 to-black"
+            },
+            {
+                id: 3,
+                title: "범죄도시",
+                engTitle: "The Outlaws",
+                country: "KR",
+                year: 2017,
+                rating: 8.8,
+                director: "강윤성",
+                genre: ["범죄", "액션"],
+                keywords: ["액션", "형사", "통쾌함", "킬링타임", "범죄", "타격감"],
+                synopsis: "하얼빈에서 넘어와 단숨에 기존 조직들을 장악한 신흥범죄조직 보스 장첸과 이를 소탕하려는 괴물형사 마석도의 화끈한 작전.",
+                reason: "답답한 속을 뻥 뚫어주는 시원한 맨손 액션과 유머가 어우러진 오락 영화입니다.",
+                gradient: "from-red-900 via-zinc-900 to-black"
+            },
+            {
+                id: 4,
+                title: "엑시트",
+                engTitle: "EXIT",
+                country: "KR",
+                year: 2019,
+                rating: 8.5,
+                director: "이상근",
+                genre: ["액션", "재난", "코미디"],
+                keywords: ["재난", "클라이밍", "킬링타임", "코미디", "생존", "청춘"],
+                synopsis: "유독가스로 뒤덮인 도심을 탈출해야 하는 비상상황! 산악동아리 에이스 출신 백수 용남과 대학 후배 의주가 기상천외한 용기와 기지로 탈출을 시도한다.",
+                reason: "고구마 없는 빠른 전개와 짠내 나는 유머, 손에 땀을 쥐는 클라이밍 액션이 돋보입니다.",
+                gradient: "from-lime-800 via-zinc-900 to-black"
+            },
+            {
+                id: 5,
+                title: "곤지암",
+                engTitle: "Gonjiam: Haunted Asylum",
+                country: "KR",
+                year: 2018,
+                rating: 7.8,
+                director: "정범식",
+                genre: ["공포", "스릴러"],
+                keywords: ["공포", "폐병원", "체험공포", "호러", "귀신", "긴장감"],
+                synopsis: "세계 7대 소름 끼치는 장소로 선정된 공포 체험의 성지 '곤지암 정신병원'에 7인의 공포 체험단이 라이브 방송을 위해 들어서면서 겪는 기이하고 섬뜩한 일들.",
+                reason: "1인칭 시점 카메라 연출로 실제 흉가에 들어간 듯한 극강의 공포감을 선사합니다.",
+                gradient: "from-slate-900 via-neutral-950 to-black"
+            },
+            {
+                id: 6,
+                title: "청년경찰",
+                engTitle: "Midnight Runners",
+                country: "KR",
+                year: 2017,
+                rating: 8.4,
+                director: "김주환",
+                genre: ["액션", "코미디"],
+                keywords: ["버디무비", "코미디", "액션", "청춘", "킬링타임", "수사"],
+                synopsis: "의욕충만 경찰대생 기준과 이론백단 경찰대생 희열. 외출을 나왔다 우연히 납치 사건을 목격하게 되고, 실전 수사에 직접 뛰어든다.",
+                reason: "두 주연 배우의 유쾌한 케미와 패기 넘치는 액션이 돋보이는 가벼운 오락 영화입니다.",
+                gradient: "from-blue-900 via-slate-900 to-black"
+            },
+            {
+                id: 7,
+                title: "파묘",
+                engTitle: "Exhuma",
+                country: "KR",
+                year: 2024,
+                rating: 8.7,
+                director: "장재현",
+                genre: ["미스터리", "공포", "오컬트"],
+                keywords: ["오컬트", "무속", "미스터리", "풍수지리", "공포", "긴장감"],
+                synopsis: "거액의 돈을 받고 수상한 묘를 이장한 풍수사와 장의사, 무속인들에게 벌어지는 기이한 사건을 담은 오컬트 미스터리 영화.",
+                reason: "한국 토속 신앙과 풍수지리를 엮어낸 묵직한 분위기와 몰입감이 뛰어난 화제작입니다.",
+                gradient: "from-stone-800 via-zinc-950 to-black"
+            },
+            {
+                id: 41,
+                title: "부산행",
+                engTitle: "Train to Busan",
+                country: "KR",
+                year: 2016,
+                rating: 8.9,
+                director: "연상호",
+                genre: ["액션", "스릴러", "좀비"],
+                keywords: ["좀비", "재난", "생존", "열차", "가족", "긴장감"],
+                synopsis: "정체불명의 바이러스가 전국으로 확산되고, 서울역을 출발한 부산행 KTX 열차에 몸을 실은 사람들은 단 하나의 안전한 도시 부산까지 살아가기 위한 치열한 사투를 벌인다.",
+                reason: "달리는 열차라는 제한된 공간에서 펼쳐지는 속도감 넘치는 한국형 좀비 블록버스터입니다.",
+                gradient: "from-red-950 via-slate-900 to-black"
+            },
+            {
+                id: 42,
+                title: "신세계",
+                engTitle: "New World",
+                country: "KR",
+                year: 2013,
+                rating: 9.1,
+                director: "박훈정",
+                genre: ["범죄", "드라마", "느와르"],
+                keywords: ["느와르", "언더커버", "범죄", "의리", "배신", "긴장감"],
+                synopsis: "국내 최대 범죄 조직 '골드문'에 잠입한 형사 자성과 그를 조종하는 경찰 강 과장, 그리고 자성을 친형제처럼 아끼는 조직의 2인자 정청 사이의 숨 막히는 심리전.",
+                reason: "한국 범죄 느와르의 정점을 찍은 강렬한 캐릭터와 대사들이 빛나는 작품입니다.",
+                gradient: "from-zinc-800 via-neutral-950 to-black"
+            },
+            {
+                id: 43,
+                title: "베테랑",
+                engTitle: "Veteran",
+                country: "KR",
+                year: 2015,
+                rating: 8.8,
+                director: "류승완",
+                genre: ["액션", "범죄", "코미디"],
+                keywords: ["형사", "통쾌함", "액션", "재벌", "코미디", "킬링타임"],
+                synopsis: "한 번 꽂힌 것은 무조건 끝을 보는 행동파 광역수사대 형사 서도철이 안하무인 유아독존 재벌 3세 조태오를 쫓으며 벌어지는 통쾌한 범죄 오락 액션.",
+                reason: "시원한 액션과 권선징악의 쾌감이 살아있는 유쾌한 형사물입니다.",
+                gradient: "from-blue-950 via-zinc-900 to-black"
+            },
+            {
+                id: 44,
+                title: "헤어질 결심",
+                engTitle: "Decision to Leave",
+                country: "KR",
+                year: 2022,
+                rating: 8.9,
+                director: "박찬욱",
+                genre: ["로맨스", "미스터리", "드라마"],
+                keywords: ["미스터리", "로맨스", "형사", "여운", "심리전", "수사"],
+                synopsis: "산 정상에서 추락한 한 남자의 변사 사건을 맡은 형사 해준이 사망자의 아내 서래를 용의선상에 올리면서 의심과 관심을 동시에 느끼며 빠져드는 수사 멜로극.",
+                reason: "독특한 대사와 미장센, 짙은 여운이 남는 미스터리 로맨스입니다.",
+                gradient: "from-teal-950 via-slate-900 to-black"
+            },
+            {
+                id: 45,
+                title: "30일",
+                engTitle: "Love Reset",
+                country: "KR",
+                year: 2023,
+                rating: 8.1,
+                director: "남대중",
+                genre: ["코미디", "로맨스"],
+                keywords: ["코미디", "로맨스", "기억상실", "이혼", "킬링타임", "유머"],
+                synopsis: "드디어 D-30, 서로의 찌질함과 똘기를 견디다 못해 마침내 완벽하게 남남이 되기 직전 동반기억상실증에 걸려버린 정열과 나라의 코믹 로맨스.",
+                reason: "현실 부부의 티격태격 코미디를 가볍고 유쾌하게 풀어낸 로맨틱 코미디입니다.",
+                gradient: "from-pink-800 via-rose-950 to-black"
+            },
+
+            // 미국 (US) - 14편
+            {
+                id: 8,
+                title: "인셉션",
+                engTitle: "Inception",
+                country: "US",
+                year: 2010,
+                rating: 9.4,
+                director: "크리스토퍼 놀란",
+                genre: ["SF", "액션", "스릴러"],
+                keywords: ["꿈", "반전", "SF", "두뇌게임", "액션"],
+                synopsis: "타인의 꿈에 들어가 생각을 훔치는 특수 보안요원 코브에게 생각을 심는 '인셉션' 작전이 제안되면서 벌어지는 거대한 꿈속 전쟁.",
+                reason: "치밀한 세계관과 압도적 스케일을 자랑하는 SF 액션 블록버스터입니다.",
+                gradient: "from-blue-950 via-slate-900 to-black"
+            },
+            {
+                id: 9,
+                title: "나이브스 아웃",
+                engTitle: "Knives Out",
+                country: "US",
+                year: 2019,
+                rating: 8.9,
+                director: "라이언 존슨",
+                genre: ["미스터리", "코미디", "스릴러"],
+                keywords: ["추리", "반전", "탐정", "킬링타임", "유머", "가족"],
+                synopsis: "베스트셀러 미스터리 작가가 85세 생일파티 후 숨진 채 발견된다. 사건을 조사하기 위해 파견된 명탐정 브누아 블랑이 가족 모두를 용의선상에 올린다.",
+                reason: "지루할 틈 없는 유머와 촘촘한 추리, 반전이 어우러진 현대판 추리극입니다.",
+                gradient: "from-amber-900 via-red-950 to-black"
+            },
+            {
+                id: 10,
+                title: "존 윅",
+                engTitle: "John Wick",
+                country: "US",
+                year: 2014,
+                rating: 8.6,
+                director: "채드 스타헬스키",
+                genre: ["액션", "스릴러"],
+                keywords: ["액션", "복수", "킬러", "총격전", "킬링타임", "스타일리시"],
+                synopsis: "은퇴한 전설적인 킬러 존 윅. 아내가 남기고 간 강아지와 애마를 빼앗긴 날, 그의 잠들어 있던 본능이 깨어나며 거대 범죄 조직을 홀로 쓸어버린다.",
+                reason: "군더더기 없는 스토리와 독보적인 건푸(Gun-Fu) 액션이 짜릿한 쾌감을 줍니다.",
+                gradient: "from-purple-950 via-zinc-900 to-black"
+            },
+            {
+                id: 11,
+                title: "주토피아",
+                engTitle: "Zootopia",
+                country: "US",
+                year: 2016,
+                rating: 9.1,
+                director: "바이론 하워드",
+                genre: ["애니메이션", "코미디", "모험"],
+                keywords: ["애니메이션", "힐링", "버디무비", "추리", "코미디", "가족"],
+                synopsis: "누구나 무엇이든 될 수 있는 도시 주토피아. 최초의 토끼 경찰관 주디 홉스가 사기꾼 여우 닉 와일드와 손잡고 연쇄 실종 사건을 파헤친다.",
+                reason: "어른과 아이 모두가 즐길 수 있는 재치 있는 유머와 탄탄한 추리 스토리를 갖췄습니다.",
+                gradient: "from-emerald-800 via-teal-950 to-black"
+            },
+            {
+                id: 12,
+                title: "행오버",
+                engTitle: "The Hangover",
+                country: "US",
+                year: 2009,
+                rating: 8.2,
+                director: "토드 필립스",
+                genre: ["코미디"],
+                keywords: ["코미디", "병맛", "라스베이거스", "우정", "킬링타임", "유머"],
+                synopsis: "결혼을 앞둔 친구의 총각파티를 위해 라스베이거스로 떠난 네 친구. 다음 날 아침 깨어나 보니 호텔 방은 엉망이고 신랑이 감쪽같이 사라졌다!",
+                reason: "어젯밤의 기억을 되짚어가는 과정이 황당하고 유쾌한 성인 코미디의 대표작입니다.",
+                gradient: "from-yellow-800 via-stone-900 to-black"
+            },
+            {
+                id: 13,
+                title: "컨저링",
+                engTitle: "The Conjuring",
+                country: "US",
+                year: 2013,
+                rating: 8.4,
+                director: "제임스 완",
+                genre: ["공포", "미스터리"],
+                keywords: ["공포", "실화", "귀신", "오컬트", "호러", "긴장감"],
+                synopsis: "꿈에 그리던 새집으로 이사 간 페론 가족. 하지만 그곳에서 설명할 수 없는 기괴한 일들이 벌어지고, 초자연 현상 전문가 워렌 부부가 사건에 뛰어든다.",
+                reason: "사운드와 카메라 연출만으로 심장을 쫄깃하게 만드는 현대 호러 영화의 교과서입니다.",
+                gradient: "from-zinc-800 via-neutral-950 to-black"
+            },
+            {
+                id: 14,
+                title: "가디언즈 오브 갤럭시",
+                engTitle: "Guardians of the Galaxy",
+                country: "US",
+                year: 2014,
+                rating: 8.7,
+                director: "제임스 건",
+                genre: ["SF", "액션", "코미디"],
+                keywords: ["우주", "히어로", "코미디", "음악", "액션", "킬링타임"],
+                synopsis: "자칭 전설의 무법자 스타로드와 현상금 사냥꾼 로켓, 그루트 등 은하계의 문제아들이 우주의 운명을 걸고 뭉친 유쾌한 스페이스 오페라.",
+                reason: "신나는 올드팝 사운드트랙과 유쾌한 팀워크, 화려한 우주 액션이 어우러집니다.",
+                gradient: "from-indigo-900 via-purple-950 to-black"
+            },
+            {
+                id: 15,
+                title: "인턴",
+                engTitle: "The Intern",
+                country: "US",
+                year: 2015,
+                rating: 8.8,
+                director: "낸시 마이어스",
+                genre: ["코미디", "드라마"],
+                keywords: ["힐링", "직장", "우정", "위로", "따뜻한", "코미디"],
+                synopsis: "창업 1년 반 만에 성공 신화를 이룬 30대 열정 CEO 줄스 앞에 수십 년의 직장 경험을 가진 70세 시니어 인턴 벤이 채용되면서 벌어지는 이야기.",
+                reason: "자극적인 갈등 없이 편안한 미소와 따뜻한 위로를 건네는 기분 좋은 영화입니다.",
+                gradient: "from-sky-900 via-slate-900 to-black"
+            },
+            {
+                id: 46,
+                title: "탑건: 매버릭",
+                engTitle: "Top Gun: Maverick",
+                country: "US",
+                year: 2022,
+                rating: 9.2,
+                director: "조셉 코신스키",
+                genre: ["액션", "드라마"],
+                keywords: ["액션", "전투기", "항공", "블록버스터", "감동", "스피드"],
+                synopsis: "최고의 파일럿이자 전설적인 인물 매버릭이 자신이 졸업한 훈련학교 교관으로 발탁되면서 생사를 넘나드는 불가능한 미션을 수행하는 항공 액션 영화.",
+                reason: "실제 전투기 탑승 촬영으로 구현한 짜릿한 비행 액션과 전율이 압권입니다.",
+                gradient: "from-orange-900 via-slate-900 to-black"
+            },
+            {
+                id: 47,
+                title: "겟 아웃",
+                engTitle: "Get Out",
+                country: "US",
+                year: 2017,
+                rating: 8.6,
+                director: "조던 필",
+                genre: ["공포", "미스터리", "스릴러"],
+                keywords: ["반전", "미스터리", "공포", "스릴러", "사회풍자", "긴장감"],
+                synopsis: "흑인 청년 크리스가 백인 여자친구 로즈의 초대로 그녀의 부모님 집을 방문하면서 기묘하고 소름 끼치는 비밀을 마주하게 되는 미스터리 스릴러.",
+                reason: "복선 회수와 기발한 설정, 숨 막히는 서스펜스가 돋보이는 현대 스릴러의 걸작입니다.",
+                gradient: "from-neutral-800 via-stone-950 to-black"
+            },
+            {
+                id: 48,
+                title: "위플래쉬",
+                engTitle: "Whiplash",
+                country: "US",
+                year: 2014,
+                rating: 9.1,
+                director: "데이미언 셔젤",
+                genre: ["드라마", "음악"],
+                keywords: ["음악", "드럼", "광기", "열정", "긴장감", "전율"],
+                synopsis: "최고의 드러머를 꿈꾸는 음대 신입생 앤드류가 폭군 같은 플레처 교수의 극한 지독한 가르침 속에서 광기 어린 집착으로 한계를 돌파해 나가는 이야기.",
+                reason: "액션 영화보다 더 숨 막히는 긴장감과 마지막 10분간의 폭발적인 드럼 연주가 전율을 일으킵니다.",
+                gradient: "from-amber-950 via-zinc-950 to-black"
+            },
+            {
+                id: 49,
+                title: "데드풀",
+                engTitle: "Deadpool",
+                country: "US",
+                year: 2016,
+                rating: 8.5,
+                director: "팀 밀러",
+                genre: ["액션", "코미디", "SF"],
+                keywords: ["히어로", "병맛", "코미디", "액션", "킬링타임", "유머"],
+                synopsis: "암 치료를 위한 비밀 실험에 참여했다가 강력한 힐링팩터 능력과 함께 흉측한 외모를 얻게 된 전직 특수부대 용병 웨이드 윌슨의 거침없는 복수극.",
+                reason: "제4의 벽을 넘나드는 수다와 B급 유머, 화끈한 액션이 매력적인 안티 히어로 영화입니다.",
+                gradient: "from-red-800 via-zinc-950 to-black"
+            },
+            {
+                id: 50,
+                title: "엣지 오브 투모로우",
+                engTitle: "Edge of Tomorrow",
+                country: "US",
+                year: 2014,
+                rating: 8.7,
+                director: "더그 라이만",
+                genre: ["SF", "액션"],
+                keywords: ["타임루프", "SF", "외계인", "액션", "킬링타임", "전쟁"],
+                synopsis: "외계 종족과의 전쟁에 투입된 공보장교 빌 케이지가 전사하는 순간, 죽기 직전의 시간으로 계속 되돌아가는 타임루프에 갇히면서 최강의 전사로 거듭나는 이야기.",
+                reason: "게임의 세이브·로드처럼 반복되는 죽음 속에서 성장하는 설정이 지루할 틈 없이 재미있습니다.",
+                gradient: "from-slate-800 via-cyan-950 to-black"
+            },
+            {
+                id: 51,
+                title: "라라랜드",
+                engTitle: "La La Land",
+                country: "US",
+                year: 2016,
+                rating: 9.0,
+                director: "데이미언 셔젤",
+                genre: ["로맨스", "뮤지컬", "드라마"],
+                keywords: ["음악", "로맨스", "꿈", "여운", "영상미", "재즈"],
+                synopsis: "꿈을 꾸는 사람들을 위한 도시 로스앤젤레스에서 만난 재즈 피아니스트 세바스찬과 배우 지망생 미아의 찬란한 사랑과 현실적인 선택을 그린 뮤지컬 로맨스.",
+                reason: "황홀한 음악과 색감, 그리고 깊은 여운을 남기는 엔딩이 인상적인 작품입니다.",
+                gradient: "from-purple-900 via-indigo-950 to-black"
+            },
+
+            // 일본 (JP) - 10편
+            {
+                id: 16,
+                title: "너의 이름은.",
+                engTitle: "Your Name",
+                country: "JP",
+                year: 2016,
+                rating: 9.0,
+                director: "신카이 마코토",
+                genre: ["애니메이션", "로맨스", "판타지"],
+                keywords: ["타임루프", "첫사랑", "운명", "애니메이션", "영상미"],
+                synopsis: "도쿄 소년 타키와 시골 소녀 미츠하의 몸이 꿈속에서 뒤바뀌면서 시작되는 시간을 초월한 기적과 사랑 이야기.",
+                reason: "환상적인 작화와 음악, 애틋한 서사가 결합된 인기 애니메이션입니다.",
+                gradient: "from-indigo-900 via-purple-950 to-black"
+            },
+            {
+                id: 17,
+                title: "스즈메의 문단속",
+                engTitle: "Suzume",
+                country: "JP",
+                year: 2022,
+                rating: 8.6,
+                director: "신카이 마코토",
+                genre: ["애니메이션", "모험", "판타지"],
+                keywords: ["애니메이션", "모험", "재난", "판타지", "치유", "로드무비"],
+                synopsis: "규슈의 한적한 마을에 사는 소녀 스즈메가 재난을 부르는 문을 닫기 위해 일본 전역을 여행하며 성장하는 판타지 어드벤처.",
+                reason: "의자로 변한 청년과의 유쾌한 모험과 아름다운 일본 각지의 풍경이 매력적입니다.",
+                gradient: "from-cyan-900 via-blue-950 to-black"
+            },
+            {
+                id: 18,
+                title: "리틀 포레스트: 여름과 가을",
+                engTitle: "Little Forest: Summer/Autumn",
+                country: "JP",
+                year: 2014,
+                rating: 8.7,
+                director: "모리 준이치",
+                genre: ["드라마"],
+                keywords: ["힐링", "요리", "자연", "귀농", "잔잔한", "위로"],
+                synopsis: "도시 생활에 지쳐 고향으로 돌아온 이치코가 자급자족 농사를 지으며 제철 음식으로 몸과 마음을 치유해 나가는 사계절 기록.",
+                reason: "맛있는 음식 소리와 푸른 자연 풍경만으로도 마음이 평온해지는 힐링 영화입니다.",
+                gradient: "from-lime-900 via-emerald-950 to-black"
+            },
+            {
+                id: 19,
+                title: "오늘 밤, 세계에서 이 사랑이 사라진다 해도",
+                engTitle: "Even If This Love Disappears from the World Tonight",
+                country: "JP",
+                year: 2022,
+                rating: 8.5,
+                director: "미키 타카히로",
+                genre: ["로맨스", "드라마"],
+                keywords: ["로맨스", "기억", "첫사랑", "눈물", "청춘", "여운"],
+                synopsis: "자고 일어나면 전날의 기억을 잃는 선행성 기억상실증에 걸린 소녀 마오리와 그녀에게 매일 새로운 추억을 선물하려는 소년 토루의 애틋한 로맨스.",
+                reason: "순수한 감성과 눈물샘을 자극하는 전형적인 일본 청춘 로맨스의 매력을 담았습니다.",
+                gradient: "from-pink-900 via-rose-950 to-black"
+            },
+            {
+                id: 20,
+                title: "카메라를 멈추면 안 돼!",
+                engTitle: "One Cut of the Dead",
+                country: "JP",
+                year: 2017,
+                rating: 8.8,
+                director: "우에다 신이치로",
+                genre: ["코미디", "좀비"],
+                keywords: ["코미디", "좀비", "반전", "병맛", "킬링타임", "영화제작"],
+                synopsis: "폐건물에서 저예산 좀비 영화를 촬영하던 중 진짜 좀비 떼가 습격한다! 하지만 광기 어린 감독은 카메라를 절대 멈추지 않고 촬영을 강행한다.",
+                reason: "초반 37분을 견디면 기발한 구성과 폭소가 터지는 독립 영화의 기적 같은 작품입니다.",
+                gradient: "from-red-900 via-stone-900 to-black"
+            },
+            {
+                id: 21,
+                title: "더 퍼스트 슬램덩크",
+                engTitle: "The First Slam Dunk",
+                country: "JP",
+                year: 2022,
+                rating: 9.2,
+                director: "이노우에 다케히코",
+                genre: ["애니메이션", "스포츠", "드라마"],
+                keywords: ["스포츠", "농구", "애니메이션", "감동", "청춘", "열정"],
+                synopsis: "전국 제패를 꿈꾸는 북산고 농구부 5인방의 꿈과 열정, 멈추지 않는 도전을 포인트 가드 송태섭의 시선으로 그려낸 스포츠 애니메이션.",
+                reason: "실제 농구 경기를 보는 듯한 역동적인 연출과 뜨거운 전율을 선사합니다.",
+                gradient: "from-orange-900 via-red-950 to-black"
+            },
+            {
+                id: 52,
+                title: "센과 치히로의 행방불명",
+                engTitle: "Spirited Away",
+                country: "JP",
+                year: 2001,
+                rating: 9.5,
+                director: "미야자키 하야오",
+                genre: ["애니메이션", "판타지", "모험"],
+                keywords: ["애니메이션", "판타지", "모험", "힐링", "성장", "지브리"],
+                synopsis: "우연히 금지된 신들의 세계로 들어간 소녀 치히로가 돼지로 변해버린 부모님을 구하기 위해 마녀 유바바의 온천장에서 일하며 성장하는 판타지 모험극.",
+                reason: "환상적인 상상력과 따뜻한 감동이 어우러진 지브리 스튜디오의 대표작입니다.",
+                gradient: "from-rose-900 via-amber-950 to-black"
+            },
+            {
+                id: 53,
+                title: "괴물",
+                engTitle: "Monster",
+                country: "JP",
+                year: 2023,
+                rating: 8.9,
+                director: "고레에다 히로카즈",
+                genre: ["드라마", "미스터리"],
+                keywords: ["미스터리", "반전", "시점", "여운", "학교", "드라마"],
+                synopsis: "아들의 행동이 이상해진 것을 느낀 싱글맘 사오리가 학교를 찾아가면서 시작되는 이야기. 엄마, 담임교사, 그리고 아이들의 각기 다른 시선으로 진실이 드러난다.",
+                reason: "다층적인 시점 구성으로 진실이 뒤집히는 순간의 충격과 깊은 여운이 인상적입니다.",
+                gradient: "from-teal-900 via-zinc-900 to-black"
+            },
+            {
+                id: 54,
+                title: "나는 내일, 어제의 너와 만난다",
+                engTitle: "My Tomorrow, Your Yesterday",
+                country: "JP",
+                year: 2016,
+                rating: 8.6,
+                director: "미키 타카히로",
+                genre: ["로맨스", "판타지"],
+                keywords: ["로맨스", "타임루프", "첫사랑", "눈물", "운명", "교토"],
+                synopsis: "교토의 미대생 타카토시가 전철에서 만난 에미에게 첫눈에 반한다. 하지만 두 사람의 시간은 서로 반대 방향으로 흐르고 있다는 놀라운 비밀이 숨겨져 있다.",
+                reason: "시간의 비밀을 알게 된 후 영화를 다시 떠올릴 때 진가가 드러나는 애틋한 로맨스입니다.",
+                gradient: "from-sky-900 via-indigo-950 to-black"
+            },
+            {
+                id: 55,
+                title: "극장판 귀멸의 칼날: 무한열차편",
+                engTitle: "Demon Slayer: Mugen Train",
+                country: "JP",
+                year: 2020,
+                rating: 9.0,
+                director: "소토자키 하루오",
+                genre: ["애니메이션", "액션", "판타지"],
+                keywords: ["애니메이션", "액션", "판타지", "감동", "열차", "열정"],
+                synopsis: "어둠 속을 달리는 무한열차에서 승객들이 연이어 실종되는 사건이 발생하고, 탄지로 일행과 귀살대 최강의 검사 렌고쿠가 혈귀에 맞서 싸운다.",
+                reason: "화려한 작화와 박진감 넘치는 검술 액션, 뜨거운 감동이 결합된 흥행작입니다.",
+                gradient: "from-orange-800 via-red-950 to-black"
+            },
+
+            // 프랑스 (FR) - 6편
+            {
+                id: 22,
+                title: "언터처블: 1%의 우정",
+                engTitle: "The Intouchables",
+                country: "FR",
+                year: 2011,
+                rating: 9.3,
+                director: "올리비에르 나카체",
+                genre: ["코미디", "드라마"],
+                keywords: ["실화", "우정", "힐링", "유머", "감동", "코미디"],
+                synopsis: "전신마비 백만장자 필립과 가진 것 없는 청년 드리스가 만나 편견을 깨고 진정한 친구가 되어가는 실화 바탕 휴먼 코미디.",
+                reason: "유쾌한 농담과 진심 어린 우정이 어우러져 기분 좋게 볼 수 있는 작품입니다.",
+                gradient: "from-amber-800 via-stone-900 to-black"
+            },
+            {
+                id: 23,
+                title: "택시",
+                engTitle: "Taxi",
+                country: "FR",
+                year: 1998,
+                rating: 8.3,
+                director: "제라르 피레스",
+                genre: ["액션", "코미디"],
+                keywords: ["카체이싱", "코미디", "액션", "킬링타임", "버디무비", "스피드"],
+                synopsis: "스피드광 택시 운전사 다니엘과 운전면허조차 없는 어설픈 형사 에밀리앙이 손잡고 독일 강도단을 쫓는 초고속 코믹 액션.",
+                reason: "마르세유 시내를 질주하는 시원한 카체이싱과 슬랩스틱 유머가 일품인 오락 영화입니다.",
+                gradient: "from-yellow-700 via-zinc-900 to-black"
+            },
+            {
+                id: 24,
+                title: "미드나잇 인 파리",
+                engTitle: "Midnight in Paris",
+                country: "FR",
+                year: 2011,
+                rating: 8.6,
+                director: "우디 앨런",
+                genre: ["판타지", "로맨스", "코미디"],
+                keywords: ["시간여행", "파리", "예술", "힐링", "로맨스", "낭만"],
+                synopsis: "파리로 여행 온 소설가 길이 매일 밤 자정이 되면 1920년대 황금기 파리로 시간 여행을 떠나 헤밍웨이, 피카소 등을 만나는 낭만 판타지.",
+                reason: "아름다운 파리의 야경과 예술가들의 낭만을 가볍고 유쾌하게 즐길 수 있습니다.",
+                gradient: "from-amber-900 via-indigo-950 to-black"
+            },
+            {
+                id: 25,
+                title: "언더 워터",
+                engTitle: "Under Paris",
+                country: "FR",
+                year: 2024,
+                rating: 7.4,
+                director: "자비에 젠스",
+                genre: ["스릴러", "액션", "재난"],
+                keywords: ["상어", "재난", "파리", "킬링타임", "생존", "긴장감"],
+                synopsis: "세계 트라이애슬론 대회가 열리는 파리 센강에 거대한 돌연변이 상어가 나타나면서 도시 전체가 패닉에 빠지는 재난 스릴러.",
+                reason: "파리 한복판에 상어가 나타난다는 기발한 설정의 킬링타임 재난 영화입니다.",
+                gradient: "from-cyan-950 via-slate-900 to-black"
+            },
+            {
+                id: 56,
+                title: "레옹",
+                engTitle: "Léon: The Professional",
+                country: "FR",
+                year: 1994,
+                rating: 9.3,
+                director: "뤽 베송",
+                genre: ["액션", "범죄", "드라마"],
+                keywords: ["킬러", "액션", "복수", "우정", "감동", "뉴욕"],
+                synopsis: "뿌리 없이 떠도는 고독한 킬러 레옹이 부패한 경찰에게 가족을 잃은 옆집 소녀 마틸다를 구해주면서 서로의 삶에 유일한 안식처가 되어주는 액션 드라마.",
+                reason: "강렬한 총격 액션과 세대를 초월한 애틋한 유대감이 어우러진 작품입니다.",
+                gradient: "from-emerald-950 via-stone-900 to-black"
+            },
+            {
+                id: 57,
+                title: "아멜리에",
+                engTitle: "Amélie",
+                country: "FR",
+                year: 2001,
+                rating: 8.8,
+                director: "장 피에르 주네",
+                genre: ["로맨스", "코미디", "판타지"],
+                keywords: ["파리", "힐링", "로맨스", "동화", "유머", "영상미"],
+                synopsis: "상상력이 풍부한 파리의 카페 직원 아멜리에가 주변 사람들에게 몰래 작은 행복을 선물하다가 자신만의 운명적인 사랑을 찾아가는 사랑스러운 동화.",
+                reason: "동화 같은 색감과 경쾌한 음악, 기발한 상상력이 기분을 좋게 만들어 줍니다.",
+                gradient: "from-red-900 via-emerald-950 to-black"
+            },
+
+            // 영국 (GB) - 6편
+            {
+                id: 26,
+                title: "어바웃 타임",
+                engTitle: "About Time",
+                country: "GB",
+                year: 2013,
+                rating: 9.2,
+                director: "리차드 커티스",
+                genre: ["로맨스", "코미디", "판타지"],
+                keywords: ["타임루프", "가족", "첫사랑", "힐링", "로맨스"],
+                synopsis: "시간을 되돌리는 능력을 가진 청년 팀이 완벽한 사랑을 이루기 위해 시간을 되돌리다 일상의 소중함을 깨닫는 로맨틱 코미디.",
+                reason: "따뜻한 가족애와 설레는 로맨스가 조화를 이루는 인기 영국 영화입니다.",
+                gradient: "from-red-900 via-zinc-900 to-black"
+            },
+            {
+                id: 27,
+                title: "킹스맨: 시크릿 에이전트",
+                engTitle: "Kingsman: The Secret Service",
+                country: "GB",
+                year: 2014,
+                rating: 8.8,
+                director: "매튜 본",
+                genre: ["액션", "코미디", "스파이"],
+                keywords: ["스파이", "액션", "수트", "코미디", "킬링타임", "스타일리시"],
+                synopsis: "루저로 낙인찍혔던 청년 에그시가 전설적인 베테랑 요원 해리 하트를 만나 최정예 비밀 스파이 기구 '킹스맨'의 요원으로 거듭나는 이야기.",
+                reason: "클래식한 수트 차림으로 펼치는 파격적이고 통쾌한 스파이 액션입니다.",
+                gradient: "from-amber-900 via-stone-950 to-black"
+            },
+            {
+                id: 28,
+                title: "새벽의 황당한 저주",
+                engTitle: "Shaun of the Dead",
+                country: "GB",
+                year: 2004,
+                rating: 8.4,
+                director: "에드가 라이트",
+                genre: ["코미디", "좀비", "공포"],
+                keywords: ["좀비", "코미디", "병맛", "우정", "킬링타임", "유머"],
+                synopsis: "무기력한 일상을 보내던 숀의 동네에 갑자기 좀비 바이러스가 퍼진다. 숀은 헤어진 여자친구와 어머니를 구해 단골 펍 '윈체스터'로 피신하려 한다.",
+                reason: "영국 특유의 블랙 유머와 리드미컬한 편집이 돋보이는 좀비 코미디입니다.",
+                gradient: "from-red-950 via-neutral-900 to-black"
+            },
+            {
+                id: 29,
+                title: "노팅 힐",
+                engTitle: "Notting Hill",
+                country: "GB",
+                year: 1999,
+                rating: 8.7,
+                director: "로저 미첼",
+                genre: ["로맨스", "코미디"],
+                keywords: ["로맨스", "톱스타", "런던", "코미디", "힐링", "사랑"],
+                synopsis: "런던 노팅 힐에서 작은 여행 서점을 운영하는 평범한 남자 윌리엄과 세계적인 할리우드 여배우 애나가 운명처럼 만나 사랑에 빠지는 이야기.",
+                reason: "누구나 한 번쯤 꿈꿔볼 법한 동화 같은 로맨스와 유머가 가득한 작품입니다.",
+                gradient: "from-sky-900 via-blue-950 to-black"
+            },
+            {
+                id: 58,
+                title: "뜨거운 녀석들",
+                engTitle: "Hot Fuzz",
+                country: "GB",
+                year: 2007,
+                rating: 8.5,
+                director: "에드가 라이트",
+                genre: ["액션", "코미디", "미스터리"],
+                keywords: ["코미디", "형사", "액션", "병맛", "킬링타임", "버디무비"],
+                synopsis: "너무 유능해서 시골 마을로 좌천된 런던 엘리트 경찰 니콜라스가 평화로워 보이는 마을에서 잇따라 발생하는 기이한 사고들의 배후를 파헤치는 코믹 액션.",
+                reason: "전반부의 깨알 같은 복선이 후반부 화끈한 액션으로 폭발하는 쾌감이 일품입니다.",
+                gradient: "from-blue-900 via-zinc-900 to-black"
+            },
+            {
+                id: 59,
+                title: "스내치",
+                engTitle: "Snatch",
+                country: "GB",
+                year: 2000,
+                rating: 8.7,
+                director: "가이 리치",
+                genre: ["범죄", "코미디"],
+                keywords: ["범죄", "블랙코미디", "다이아몬드", "유머", "스타일리시", "킬링타임"],
+                synopsis: "거대한 다이아몬드를 둘러싸고 런던 뒷골목의 도둑, 불법 복싱 프로모터, 집시 복서, 마피아 보스들이 얽히고설키며 벌어지는 소동극.",
+                reason: "현란한 편집과 예측 불허의 우연이 만들어내는 블랙 코미디 범죄물입니다.",
+                gradient: "from-amber-950 via-neutral-900 to-black"
+            },
+
+            // 스페인 (ES) - 4편
+            {
+                id: 30,
+                title: "인비저블 게스트",
+                engTitle: "The Invisible Guest",
+                country: "ES",
+                year: 2016,
+                rating: 9.1,
+                director: "오리올 파울로",
+                genre: ["스릴러", "미스터리", "범죄"],
+                keywords: ["반전", "밀실", "두뇌게임", "추리", "긴장감"],
+                synopsis: "밀실 살인 사건의 용의자가 된 사업가 아드리안과 승률 100% 변호사가 단 3시간 동안 사건의 진실을 재구성하는 반전 스릴러.",
+                reason: "숨 쉴 틈 없이 몰아치는 심리전과 소름 돋는 엔딩 반전이 압권입니다.",
+                gradient: "from-slate-800 via-zinc-950 to-black"
+            },
+            {
+                id: 31,
+                title: "더 플랫폼",
+                engTitle: "The Platform",
+                country: "ES",
+                year: 2019,
+                rating: 8.0,
+                director: "가더 가츠테루-우루샤",
+                genre: ["SF", "스릴러", "공포"],
+                keywords: ["디스토피아", "생존", "반전", "계급사회", "스릴러", "상징"],
+                synopsis: "0층부터 수백 층까지 수직으로 이루어진 감옥. 하루 한 번 위층에서부터 음식 테이블이 내려오고, 아래층 사람들은 위층이 남긴 음식만 먹을 수 있다.",
+                reason: "강렬한 설정과 인간의 본성을 파고드는 몰입감으로 큰 화제를 모은 스릴러입니다.",
+                gradient: "from-stone-800 via-neutral-950 to-black"
+            },
+            {
+                id: 32,
+                title: "REC (알이씨)",
+                engTitle: "REC",
+                country: "ES",
+                year: 2007,
+                rating: 8.1,
+                director: "자우메 발라게로",
+                genre: ["공포", "스릴러", "좀비"],
+                keywords: ["공포", "좀비", "파운드푸티지", "폐쇄공간", "호러", "긴장감"],
+                synopsis: "소방관들의 야간 근무를 밀착 취재하던 리포터와 카메라맨이 한 아파트에 출동했다가 정체불명의 감염자들과 함께 건물 안에 봉쇄된다.",
+                reason: "핸드헬드 카메라 기법으로 극한의 현장감과 공포를 전달하는 호러 수작입니다.",
+                gradient: "from-emerald-950 via-zinc-950 to-black"
+            },
+            {
+                id: 60,
+                title: "더 바디",
+                engTitle: "The Body",
+                country: "ES",
+                year: 2012,
+                rating: 8.6,
+                director: "오리올 파울로",
+                genre: ["미스터리", "스릴러"],
+                keywords: ["반전", "미스터리", "실종", "추리", "긴장감", "스릴러"],
+                synopsis: "부검실에 안치되어 있던 재벌 여성의 시체가 감쪽같이 사라지고, 형사는 사망자의 남편을 유력한 용의자로 지목해 하룻밤 동안 진실을 파헤친다.",
+                reason: "마지막 순간까지 진범을 예측하기 어려운 촘촘한 스페인 미스터리 스릴러입니다.",
+                gradient: "from-indigo-950 via-zinc-950 to-black"
+            },
+
+            // 대만 (TW) - 4편
+            {
+                id: 33,
+                title: "말할 수 없는 비밀",
+                engTitle: "Secret",
+                country: "TW",
+                year: 2007,
+                rating: 9.1,
+                director: "주걸륜",
+                genre: ["로맨스", "판타지", "음악"],
+                keywords: ["첫사랑", "타임루프", "음악", "반전", "청춘"],
+                synopsis: "예술학교로 전학 온 피아노 천재 상륜이 오래된 연습실에서 신비로운 소녀 샤오위를 만나면서 펼쳐지는 시간 여행 로맨스.",
+                reason: "아름다운 피아노 연주와 놀라운 반전이 어우러진 대만 로맨스 대표작입니다.",
+                gradient: "from-amber-900 via-neutral-900 to-black"
+            },
+            {
+                id: 34,
+                title: "그 시절, 우리가 좋아했던 소녀",
+                engTitle: "You Are the Apple of My Eye",
+                country: "TW",
+                year: 2011,
+                rating: 8.8,
+                director: "구파도",
+                genre: ["로맨스", "드라마", "코미디"],
+                keywords: ["첫사랑", "청춘", "학창시절", "유머", "코미디"],
+                synopsis: "문제아 커징텅과 모범생 션자이의 풋풋하고 유쾌한 학창 시절 첫사랑 연대기.",
+                reason: "학창 시절의 찌질하면서도 순수한 감성을 유쾌하게 그려낸 청춘 영화입니다.",
+                gradient: "from-sky-800 via-blue-950 to-black"
+            },
+            {
+                id: 35,
+                title: "나의 소녀시대",
+                engTitle: "Our Times",
+                country: "TW",
+                year: 2015,
+                rating: 8.7,
+                director: "프랭키 첸",
+                genre: ["로맨스", "코미디"],
+                keywords: ["첫사랑", "청춘", "코미디", "학창시절", "설렘"],
+                synopsis: "평범한 여고생 린전신이 학교의 문제아 쉬타이위와 우연히 동맹을 맺으면서 서로의 진심을 깨달아가는 하이틴 로맨틱 코미디.",
+                reason: "설레는 하이틴 로맨스의 정석을 보여주며 많은 사랑을 받은 흥행작입니다.",
+                gradient: "from-rose-900 via-pink-950 to-black"
+            },
+            {
+                id: 61,
+                title: "상견니 (극장판)",
+                engTitle: "Someday or One Day",
+                country: "TW",
+                year: 2022,
+                rating: 8.5,
+                director: "황천인",
+                genre: ["로맨스", "판타지", "미스터리"],
+                keywords: ["타임루프", "로맨스", "미스터리", "운명", "음악", "여운"],
+                synopsis: "카세트 테이프를 통해 과거와 현재를 넘나들며 서로를 구하기 위해 시간을 거스르는 황위쉬안과 리쯔웨이의 애절한 타임슬립 로맨스.",
+                reason: "얽히고설킨 시간선과 애틋한 순애보가 돋보이는 대만 판타지 로맨스입니다.",
+                gradient: "from-purple-950 via-rose-950 to-black"
+            },
+
+            // 홍콩/중국 (HK) - 4편
+            {
+                id: 62,
+                title: "무간도",
+                engTitle: "Infernal Affairs",
+                country: "HK",
+                year: 2002,
+                rating: 9.3,
+                director: "유위강",
+                genre: ["범죄", "스릴러", "느와르"],
+                keywords: ["느와르", "언더커버", "범죄", "심리전", "긴장감", "반전"],
+                synopsis: "범죄 조직에 잠입한 경찰 진영인과 경찰 조직에 잠입한 범죄 조직원 유건명. 서로의 정체를 밝혀내야만 살아남는 두 남자의 숨 막히는 대결.",
+                reason: "언더커버 장르의 교과서이자 숨 막히는 긴장감을 선사하는 홍콩 느와르입니다.",
+                gradient: "from-slate-900 via-zinc-950 to-black"
+            },
+            {
+                id: 63,
+                title: "쿵푸 허슬",
+                engTitle: "Kung Fu Hustle",
+                country: "HK",
+                year: 2004,
+                rating: 8.8,
+                director: "주성치",
+                genre: ["코미디", "액션", "판타지"],
+                keywords: ["코미디", "액션", "병맛", "무협", "킬링타임", "유머"],
+                synopsis: "악명 높은 도끼파에 들어가고 싶은 건달 싱이 허름한 돼지촌에 들어갔다가 그곳에 숨어 살던 전설의 무림 고수들을 만나며 벌어지는 코믹 액션.",
+                reason: "만화 같은 과장된 유머와 화려한 무협 액션이 절묘하게 결합된 주성치표 코미디입니다.",
+                gradient: "from-amber-800 via-red-950 to-black"
+            },
+            {
+                id: 64,
+                title: "중경삼림",
+                engTitle: "Chungking Express",
+                country: "HK",
+                year: 1994,
+                rating: 9.0,
+                director: "왕가위",
+                genre: ["로맨스", "드라마"],
+                keywords: ["로맨스", "홍콩", "감성", "음악", "여운", "영상미"],
+                synopsis: "1994년 홍콩, 실연의 상처를 안은 두 경찰관과 그들 앞에 나타난 두 여자의 스쳐 지나가는 인연과 도시의 고독을 감각적으로 그려낸 작품.",
+                reason: "독특한 촬영 기법과 몽환적인 홍콩의 밤거리 분위기가 매력적입니다.",
+                gradient: "from-emerald-900 via-amber-950 to-black"
+            },
+            {
+                id: 65,
+                title: "유랑지구",
+                engTitle: "The Wandering Earth",
+                country: "HK",
+                year: 2019,
+                rating: 8.1,
+                director: "궈판",
+                genre: ["SF", "재난", "액션"],
+                keywords: ["SF", "우주", "재난", "블록버스터", "생존", "킬링타임"],
+                synopsis: "태양의 급격한 팽창으로 지구가 멸망할 위기에 처하자, 인류는 지구 전체에 거대한 추진 엔진을 달아 태양계를 탈출시키는 초대형 프로젝트를 감행한다.",
+                reason: "지구 자체를 우주선으로 만들어 이동시킨다는 기발하고 웅장한 스케일의 SF 재난 블록버스터입니다.",
+                gradient: "from-blue-950 via-cyan-950 to-black"
+            },
+
+            // 독일 (DE) - 2편
+            {
+                id: 66,
+                title: "타인의 삶",
+                engTitle: "The Lives of Others",
+                country: "DE",
+                year: 2006,
+                rating: 9.4,
+                director: "플로리안 헨켈 폰 도너스마르크",
+                genre: ["드라마", "스릴러"],
+                keywords: ["감청", "실화모티브", "여운", "감동", "심리전", "긴장감"],
+                synopsis: "1984년 동독, 비밀경찰 요원 비즐러가 인기 극작가 드라이만과 그의 연인을 감시하기 위해 도청 장치를 설치하지만, 그들의 삶을 엿보며 점차 마음이 흔들린다.",
+                reason: "차갑고 긴장감 넘치는 첩보 스릴러로 시작해 깊은 인간애와 묵직한 여운으로 마무리됩니다.",
+                gradient: "from-stone-800 via-zinc-950 to-black"
+            },
+            {
+                id: 67,
+                title: "굿바이 레닌",
+                engTitle: "Good Bye Lenin!",
+                country: "DE",
+                year: 2003,
+                rating: 8.8,
+                director: "볼프강 베커",
+                genre: ["코미디", "드라마"],
+                keywords: ["가족", "코미디", "감동", "힐링", "거짓말", "유머"],
+                synopsis: "베를린 장벽이 무너지기 직전 혼수상태에 빠졌다가 8개월 만에 깨어난 어머니가 충격을 받을까 봐, 아들이 집 안을 옛 동독 시절 그대로 꾸미며 벌이는 눈물겨운 소동극.",
+                reason: "어머니를 향한 아들의 유쾌하고도 애틋한 거짓말이 웃음과 감동을 동시에 줍니다.",
+                gradient: "from-amber-900 via-stone-900 to-black"
+            },
+
+            // 이탈리아 (IT) - 2편
+            {
+                id: 68,
+                title: "인생은 아름다워",
+                engTitle: "Life Is Beautiful",
+                country: "IT",
+                year: 1997,
+                rating: 9.5,
+                director: "로베르토 베니니",
+                genre: ["드라마", "코미디", "전쟁"],
+                keywords: ["가족", "감동", "눈물", "유머", "전쟁", "사랑"],
+                synopsis: "2차 세계대전 당시 유대인 수용소에 끌려간 아버지 귀도가 어린 아들에게 참혹한 현실을 숨기기 위해 이 모든 상황이 1000점을 따면 탱크를 받는 게임이라고 속이는 이야기.",
+                reason: "비극적인 상황 속에서도 유머와 사랑을 잃지 않는 아버지의 위대한 부성애를 그렸습니다.",
+                gradient: "from-amber-800 via-zinc-900 to-black"
+            },
+            {
+                id: 69,
+                title: "퍼펙트 스트레인저",
+                engTitle: "Perfect Strangers",
+                country: "IT",
+                year: 2016,
+                rating: 8.6,
+                director: "파올로 제노베제",
+                genre: ["코미디", "드라마", "스릴러"],
+                keywords: ["블랙코미디", "비밀", "스마트폰", "심리전", "반전", "대화"],
+                synopsis: "오랜 친구들이 모인 저녁 식사 자리에서 각자의 스마트폰으로 오는 모든 전화와 메시지를 공개하는 게임을 시작하면서 숨겨왔던 비밀들이 폭로되는 블랙 코미디.",
+                reason: "한국에서도 '완벽한 타인'으로 리메이크된 원작으로, 밀폐된 식탁 위에서 벌어지는 쫄깃한 심리전이 일품입니다.",
+                gradient: "from-indigo-950 via-stone-900 to-black"
+            },
+
+            // 인도 (IN) - 3편
+            {
+                id: 36,
+                title: "세 얼간이",
+                engTitle: "3 Idiots",
+                country: "IN",
+                year: 2009,
+                rating: 9.4,
+                director: "라지쿠마르 히라니",
+                genre: ["코미디", "드라마"],
+                keywords: ["코미디", "우정", "청춘", "감동", "힐링", "대학"],
+                synopsis: "천재들만 간다는 일류 명문 공대에 입학한 세 친구 란초, 파르한, 라주가 경쟁 위주의 교육 시스템에 맞서 진정한 꿈을 찾아가는 이야기.",
+                reason: "포복절도할 유머와 가슴 벅찬 감동이 완벽하게 조화된 코미디입니다.",
+                gradient: "from-orange-800 via-amber-950 to-black"
+            },
+            {
+                id: 37,
+                title: "RRR: 라이즈 로어 리볼트",
+                engTitle: "RRR",
+                country: "IN",
+                year: 2022,
+                rating: 8.9,
+                director: "S.S. 라자몰리",
+                genre: ["액션", "드라마"],
+                keywords: ["액션", "우정", "블록버스터", "킬링타임", "화려함", "브로맨스"],
+                synopsis: "1920년대 영국 식민지 시절, 서로 다른 목적을 가진 두 전설적인 영웅이 운명처럼 만나 뜨거운 우정을 나누고 거대한 제국에 맞서는 초대형 액션 대서사시.",
+                reason: "상상 초월의 스케일과 압도적 카타르시스를 선사하는 하이퍼 액션 블록버스터입니다.",
+                gradient: "from-red-800 via-orange-950 to-black"
+            },
+            {
+                id: 70,
+                title: "당갈",
+                engTitle: "Dangal",
+                country: "IN",
+                year: 2016,
+                rating: 9.1,
+                director: "니테쉬 티와리",
+                genre: ["스포츠", "드라마"],
+                keywords: ["스포츠", "실화", "감동", "가족", "레슬링", "열정"],
+                synopsis: "전직 레슬링 선수였던 아버지가 사회적 편견을 깨고 두 딸을 세계적인 레슬링 챔피언으로 키워내는 실화 바탕 스포츠 드라마.",
+                reason: "실제 경기처럼 박진감 넘치는 레슬링 장면과 벅찬 감동을 동시에 선사합니다.",
+                gradient: "from-yellow-800 via-orange-950 to-black"
+            },
+
+            // 태국 (TH) - 3편
+            {
+                id: 38,
+                title: "배드 지니어스",
+                engTitle: "Bad Genius",
+                country: "TH",
+                year: 2017,
+                rating: 8.8,
+                director: "나타우트 푼피리야",
+                genre: ["스릴러", "범죄", "드라마"],
+                keywords: ["두뇌게임", "컨닝", "긴장감", "범죄", "킬링타임", "학원물"],
+                synopsis: "천재 여고생 린이 부잣집 친구들에게 시험 답안을 유출해주며 돈을 벌기 시작하고, 급기야 시차를 이용한 전 세계 대입 시험 부정행위 프로젝트에 뛰어든다.",
+                reason: "단순한 학교 시험 컨닝을 케이퍼 무비급의 쫄깃한 스릴러로 승화시킨 오락 영화입니다.",
+                gradient: "from-emerald-900 via-teal-950 to-black"
+            },
+            {
+                id: 39,
+                title: "랑종",
+                engTitle: "The Medium",
+                country: "TH",
+                year: 2021,
+                rating: 7.7,
+                director: "반종 피산다나쿤",
+                genre: ["공포", "미스터리", "오컬트"],
+                keywords: ["공포", "오컬트", "무속", "호러", "페이크다큐", "충격"],
+                synopsis: "태국 산골마을에서 대대로 조상신을 모시는 무당 가문에 벌어진 미스터리한 현상을 다큐멘터리 팀이 밀착 취재하면서 겪는 끔찍한 공포.",
+                reason: "나홍진 감독 기획, 태국 토속 신앙이 결합되어 숨 막히는 공포와 충격을 선사합니다.",
+                gradient: "from-stone-900 via-emerald-950 to-black"
+            },
+            {
+                id: 40,
+                title: "피막",
+                engTitle: "Pee Mak",
+                country: "TH",
+                year: 2013,
+                rating: 8.3,
+                director: "반종 피산다나쿤",
+                genre: ["코미디", "공포", "로맨스"],
+                keywords: ["코미디", "귀신", "병맛", "우정", "킬링타임", "유머"],
+                synopsis: "전쟁터에서 살아 돌아온 피막과 네 명의 전우들. 하지만 고향 집에서 그들을 반기는 아름다운 아내 낙이 사실은 귀신이라는 소문이 돌기 시작한다.",
+                reason: "무서움보다 배꼽 잡는 슬랩스틱 코미디와 순애보가 돋보이는 태국 역대 최고 흥행작입니다.",
+                gradient: "from-purple-900 via-zinc-900 to-black"
+            }
+        ];
+
+        // 앱 상태 관리
+        let state = {
+            selectedCountry: 'ALL',
+            searchQuery: '',
+            bookmarks: JSON.parse(localStorage.getItem('cineworld_bookmarks') || '[]'),
+            isBookmarkView: false
+        };
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderCountryTabs();
+            updateBookmarkUI();
+            renderMovies();
+
+            // 엔터키 검색 이벤트
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('keyup', (e) => {
+                state.searchQuery = e.target.value.trim();
+                toggleClearButton();
+                if (e.key === 'Enter' || state.searchQuery === '') {
+                    renderMovies();
+                } else {
+                    // 실시간 필터링 지원
+                    renderMovies();
+                }
+            });
+
+            // 모달 바깥 클릭 시 닫기
+            document.getElementById('movieModal').addEventListener('click', (e) => {
+                if (e.target.id === 'movieModal') {
+                    closeModal();
+                }
+            });
+
+            // ESC 키로 모달 닫기
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeModal();
+            });
+        });
+
+        // 국가 탭 렌더링
+        function renderCountryTabs() {
+            const container = document.getElementById('countryTabs');
+            container.innerHTML = COUNTRIES.map(country => {
+                const isSelected = state.selectedCountry === country.id;
+                const baseClasses = "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all cursor-pointer border";
+                const activeClasses = isSelected 
+                    ? "bg-rose-600 text-white border-rose-500 shadow-lg shadow-rose-600/25" 
+                    : "bg-cinema-800/80 text-zinc-300 border-zinc-700/60 hover:bg-cinema-700 hover:text-white";
+                
+                return `
+                    <button onclick="selectCountry('${country.id}')" class="${baseClasses} ${activeClasses}">
+                        <span class="text-base">${country.flag}</span>
+                        <span>${country.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // 국가 선택 핸들러
+        function selectCountry(countryId) {
+            state.selectedCountry = countryId;
+            renderCountryTabs();
+            renderMovies();
+        }
+
+        // 키워드 칩 클릭 핸들러
+        function applyKeyword(keyword) {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = keyword;
+            state.searchQuery = keyword;
+            state.isBookmarkView = false;
+            updateFilterBanner();
+            toggleClearButton();
+            renderMovies();
+        }
+
+        // 검색 실행
+        function handleSearch() {
+            const searchInput = document.getElementById('searchInput');
+            state.searchQuery = searchInput.value.trim();
+            toggleClearButton();
+            renderMovies();
+        }
+
+        // 검색어 지우기
+        function clearSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = '';
+            state.searchQuery = '';
+            toggleClearButton();
+            renderMovies();
+        }
+
+        function toggleClearButton() {
+            const btn = document.getElementById('clearSearchBtn');
+            if (state.searchQuery.length > 0) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        // 전체 필터 초기화
+        function resetFilters() {
+            state.selectedCountry = 'ALL';
+            state.searchQuery = '';
+            state.isBookmarkView = false;
+            document.getElementById('searchInput').value = '';
+            toggleClearButton();
+            updateFilterBanner();
+            renderCountryTabs();
+            renderMovies();
+        }
+
+        // 찜한 영화 보기 토글
+        function toggleBookmarkView() {
+            state.isBookmarkView = !state.isBookmarkView;
+            updateFilterBanner();
+            renderMovies();
+        }
+
+        function updateFilterBanner() {
+            const banner = document.getElementById('filterBanner');
+            const btn = document.getElementById('bookmarkViewBtn');
+            if (state.isBookmarkView) {
+                banner.classList.remove('hidden');
+                btn.classList.add('ring-2', 'ring-rose-500', 'bg-cinema-700');
+            } else {
+                banner.classList.add('hidden');
+                btn.classList.remove('ring-2', 'ring-rose-500', 'bg-cinema-700');
+            }
+        }
+
+        // 찜하기 토글
+        function toggleBookmark(event, movieId) {
+            event.stopPropagation();
+            const index = state.bookmarks.indexOf(movieId);
+            const movie = MOVIES.find(m => m.id === movieId);
+
+            if (index === -1) {
+                state.bookmarks.push(movieId);
+                showToast(`'${movie.title}' 영화를 찜 목록에 추가했습니다.`);
+            } else {
+                state.bookmarks.splice(index, 1);
+                showToast(`'${movie.title}' 영화를 찜 목록에서 제거했습니다.`);
+            }
+
+            localStorage.setItem('cineworld_bookmarks', JSON.stringify(state.bookmarks));
+            updateBookmarkUI();
+            renderMovies();
+        }
+
+        function updateBookmarkUI() {
+            document.getElementById('bookmarkCount').textContent = state.bookmarks.length;
+        }
+
+        // 영화 목록 필터링 및 렌더링
+        function renderMovies() {
+            const grid = document.getElementById('movieGrid');
+            const emptyState = document.getElementById('emptyState');
+            const resultCountEl = document.getElementById('resultCount');
+            const sortBy = document.getElementById('sortSelect').value;
+
+            // 1. 필터링
+            let filtered = MOVIES.filter(movie => {
+                // 찜 모드 필터
+                if (state.isBookmarkView && !state.bookmarks.includes(movie.id)) {
+                    return false;
+                }
+
+                // 국가 필터
+                if (state.selectedCountry !== 'ALL' && movie.country !== state.selectedCountry) {
+                    return false;
+                }
+
+                // 키워드 검색 필터 (제목, 영문제목, 감독, 장르, 키워드, 줄거리 검색)
+                if (state.searchQuery) {
+                    const q = state.searchQuery.toLowerCase().replace(/^#/, '');
+                    const matchTitle = movie.title.toLowerCase().includes(q);
+                    const matchEng = movie.engTitle.toLowerCase().includes(q);
+                    const matchDirector = movie.director.toLowerCase().includes(q);
+                    const matchGenre = movie.genre.some(g => g.toLowerCase().includes(q));
+                    const matchKeyword = movie.keywords.some(k => k.toLowerCase().includes(q));
+                    const matchSynopsis = movie.synopsis.toLowerCase().includes(q);
+
+                    return matchTitle || matchEng || matchDirector || matchGenre || matchKeyword || matchSynopsis;
+                }
+
+                return true;
+            });
+
+            // 2. 정렬
+            filtered.sort((a, b) => {
+                if (sortBy === 'rating') return b.rating - a.rating;
+                if (sortBy === 'year_desc') return b.year - a.year;
+                if (sortBy === 'year_asc') return a.year - b.year;
+                return 0;
+            });
+
+            // 결과 수 업데이트
+            resultCountEl.innerHTML = `총 <strong class="text-white">${filtered.length}</strong>편의 영화`;
+
+            // 3. 화면 출력
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = filtered.map(movie => {
+                const countryObj = COUNTRIES.find(c => c.id === movie.country);
+                const isBookmarked = state.bookmarks.includes(movie.id);
+
+                return `
+                    <article onclick="openModal(${movie.id})" class="group bg-cinema-900 border border-zinc-800/90 hover:border-zinc-700 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 cursor-pointer">
+                        <div>
+                            <!-- 카드 상단 아트워크 배너 -->
+                            <div class="relative h-44 bg-gradient-to-br ${movie.gradient} p-5 flex flex-col justify-between overflow-hidden">
+                                <!-- 장식용 배경 패턴 -->
+                                <div class="absolute -right-6 -bottom-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                    <i data-lucide="clapperboard" class="w-32 h-32 text-white"></i>
+                                </div>
+
+                                <div class="flex items-center justify-between z-10">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-md text-xs font-medium text-zinc-200 border border-white/10">
+                                        <span>${countryObj.flag}</span>
+                                        <span>${countryObj.name}</span>
+                                    </span>
+
+                                    <button onclick="toggleBookmark(event, ${movie.id})" class="w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md flex items-center justify-center border border-white/10 transition-colors" title="찜하기">
+                                        <i data-lucide="bookmark" class="w-4 h-4 ${isBookmarked ? 'fill-rose-500 text-rose-500' : 'text-zinc-300'}"></i>
+                                    </button>
+                                </div>
+
+                                <div class="z-10">
+                                    <div class="flex items-center gap-2 text-xs text-zinc-300/90 mb-1">
+                                        <span>${movie.year}</span>
+                                        <span>•</span>
+                                        <span>${movie.genre.slice(0, 2).join(', ')}</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-white group-hover:text-rose-400 transition-colors line-clamp-1">
+                                        ${movie.title}
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <!-- 카드 본문 -->
+                            <div class="p-5">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-xs text-zinc-400">감독: <strong class="text-zinc-300 font-medium">${movie.director}</strong></span>
+                                    <div class="flex items-center gap-1 text-amber-400 text-sm font-bold">
+                                        <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                                        <span>${movie.rating.toFixed(1)}</span>
+                                    </div>
+                                </div>
+
+                                <p class="text-zinc-400 text-sm line-clamp-2 mb-4 leading-relaxed">
+                                    ${movie.synopsis}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 키워드 태그 영역 -->
+                        <div class="px-5 pb-5 pt-0 flex flex-wrap gap-1.5">
+                            ${movie.keywords.slice(0, 4).map(kw => {
+                                const isMatch = state.searchQuery && kw.toLowerCase().includes(state.searchQuery.toLowerCase().replace(/^#/, ''));
+                                return `
+                                    <span class="text-xs px-2.5 py-1 rounded-md ${isMatch ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-medium' : 'bg-cinema-800 text-zinc-400 border border-zinc-700/50'}">
+                                        #${kw}
+                                    </span>
+                                `;
+                            }).join('')}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // 영화 상세 모달 열기
+        function openModal(movieId) {
+            const movie = MOVIES.find(m => m.id === movieId);
+            if (!movie) return;
+
+            const countryObj = COUNTRIES.find(c => c.id === movie.country);
+            const isBookmarked = state.bookmarks.includes(movie.id);
+            const modal = document.getElementById('movieModal');
+            const content = document.getElementById('modalContent');
+
+            content.innerHTML = `
+                <!-- 모달 상단 비주얼 헤더 -->
+                <div class="relative h-56 sm:h-64 bg-gradient-to-br ${movie.gradient} p-6 sm:p-8 flex flex-col justify-end">
+                    <div class="absolute inset-0 bg-gradient-to-t from-cinema-900 via-cinema-900/40 to-transparent"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex flex-wrap items-center gap-2 mb-2.5">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-xs font-medium text-white border border-white/10">
+                                <span>${countryObj.flag}</span>
+                                <span>${countryObj.name}</span>
+                            </span>
+                            <span class="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-xs font-medium text-zinc-300 border border-white/10">
+                                ${movie.year}년 개봉
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/20 backdrop-blur-md text-xs font-bold text-amber-400 border border-amber-500/30">
+                                <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400"></i>
+                                ${movie.rating.toFixed(1)}
+                            </span>
+                        </div>
+
+                        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-1">${movie.title}</h2>
+                        <p class="text-sm text-zinc-400">${movie.engTitle} • 감독 ${movie.director}</p>
+                    </div>
+                </div>
+
+                <!-- 모달 상세 내용 -->
+                <div class="p-6 sm:p-8 pt-4 space-y-6">
+                    <!-- 추천 포인트 박스 -->
+                    <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                        <div class="flex items-center gap-2 text-rose-400 font-semibold text-sm mb-1.5">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>큐레이터 추천 포인트</span>
+                        </div>
+                        <p class="text-zinc-200 text-sm leading-relaxed">${movie.reason}</p>
+                    </div>
+
+                    <!-- 줄거리 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-zinc-300 mb-2">줄거리</h4>
+                        <p class="text-zinc-400 text-sm leading-relaxed">${movie.synopsis}</p>
+                    </div>
+
+                    <!-- 장르 및 키워드 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-zinc-300 mb-2.5">관련 키워드 (클릭 시 검색)</h4>
+                        <div class="flex flex-wrap gap-2">
+                            ${movie.keywords.map(kw => `
+                                <button onclick="closeModal(); applyKeyword('${kw}');" class="px-3 py-1.5 rounded-xl bg-cinema-800 hover:bg-rose-600 text-zinc-300 hover:text-white text-xs font-medium border border-zinc-700 hover:border-rose-500 transition-colors">
+                                    #${kw}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- 하단 액션 버튼 -->
+                    <div class="pt-4 border-t border-zinc-800 flex items-center justify-end gap-3">
+                        <button onclick="toggleBookmark(event, ${movie.id}); openModal(${movie.id});" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${isBookmarked ? 'bg-rose-600 text-white' : 'bg-cinema-800 hover:bg-cinema-700 text-zinc-200 border border-zinc-700'}">
+                            <i data-lucide="bookmark" class="w-4 h-4 ${isBookmarked ? 'fill-white' : ''}"></i>
+                            <span>${isBookmarked ? '찜 완료됨' : '나중에 볼 영화 찜하기'}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            const modal = document.getElementById('movieModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        // 토스트 알림 메시지
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'bg-cinema-800 text-white text-sm px-4 py-3 rounded-xl shadow-2xl border border-zinc-700 flex items-center gap-2.5 transform transition-all duration-300 translate-y-2 opacity-0';
+            toast.innerHTML = `
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-rose-400 shrink-0"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
